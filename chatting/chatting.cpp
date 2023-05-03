@@ -105,12 +105,6 @@ void Store() {
 
 }
 
-void Savechatting() {
-    
-    
-
-}
-
 void Revise() {
     string id, pw;
     string check_id, check_pw;
@@ -131,7 +125,7 @@ void Revise() {
         check_pw = result->getString(2).c_str();
     }
 
-    if (check_id != id || check_pw!=pw) {
+    if (check_id != id || check_pw != pw) {
         cout << "아이디,비밀번호가 맞지 않습니다.\n";
     }
 
@@ -152,13 +146,35 @@ void Revise() {
 
 }
 
+void Createtable() {
 
+    string check_chatting;
+
+    stmt = con->createStatement();
+    stmt->execute("CREATE TABLE user (id varchar(50) PRIMARY KEY not null, pw VARCHAR(50), user_name VARCHAR(50));");
+    delete stmt;
+
+    stmt = con->createStatement();
+    pstmt = con->prepareStatement("select * from user");
+    result = pstmt->executeQuery();
+
+    while (result->next())
+    {
+        check_chatting = result->getString(1).c_str();
+    }
+
+    if (check_chatting == "")
+    {
+        stmt = con->createStatement();
+        stmt->execute("create table chatting(id varchar(50), chat varchar(250) not null, foreign key(id) references user(id) on update cascade on delete cascade);");
+    }
+    delete stmt;
+}
 
 int main()
 {
     WSADATA wsa;
     int choice = 0;
-    bool log = true;
     int code = WSAStartup(MAKEWORD(2, 2), &wsa);
 
     // sql 연결
@@ -177,11 +193,22 @@ int main()
     stmt->execute("set names euckr");
     if (stmt) { delete stmt; stmt = nullptr; }
 
-    stmt = con->createStatement();
-    delete stmt;
-    
-    //createtable();
 
+    delete stmt;
+    string check_user;
+    stmt = con->createStatement();
+    pstmt = con->prepareStatement("show tables");
+    result = pstmt->executeQuery();
+
+    while (result->next())
+    {
+        check_user = result->getString(1).c_str();
+    }
+
+    if (check_user == "")
+    {
+        Createtable();
+    }
 
     if (!code) {
 
@@ -191,6 +218,7 @@ int main()
         client_addr.sin_port = htons(8080);
         InetPton(AF_INET, TEXT("127.0.0.1"), &client_addr.sin_addr);
         client_sock = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP);
+
 
         while (true) {
 
@@ -226,6 +254,7 @@ int main()
                             if (!connect(client_sock, (SOCKADDR*)&client_addr, sizeof(client_addr))) {
                                 cout << "Server Connect" << endl;
                                 send(client_sock, id_in.c_str(), id_in.length(), 0);
+                                Store();
                                 break;
                             }
                             cout << "Connecting..." << endl;
@@ -233,20 +262,19 @@ int main()
 
                         std::thread th2(chat_recv);
 
+
                         while (1) {
                             string text;
                             std::getline(cin, text);
                             const char* buffer = text.c_str(); // string형을 char* 타입으로 변환
                             send(client_sock, buffer, strlen(buffer), 0);
 
-                            Store();
-
-                            pstmt = con->prepareStatement("insert into chatting(id, chat) values(?,?)");
-                            pstmt->setString(1, id_in);
-                            pstmt->setString(2, text);
-                            pstmt->execute();
-                            
-                            
+                            if (text != "") {
+                                pstmt = con->prepareStatement("insert into chatting(id, chat) values(?,?)");
+                                pstmt->setString(1, id_in);
+                                pstmt->setString(2, buffer);
+                                pstmt->execute();
+                            }
 
                         }
                         th2.join();

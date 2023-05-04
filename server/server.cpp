@@ -31,7 +31,6 @@ void recv_msg(int idx);
 void del_client(int idx);
 
 
-
 int main()
 {
     WSADATA wsa;
@@ -46,7 +45,7 @@ int main()
         {
             th1[i] = std::thread(add_client);
         }
-
+        
         while (1)
         {
             string text, msg = "";
@@ -109,12 +108,14 @@ void add_client() {
     th.join();
 }
 
+
 void send_msg(const char* msg) {
     for (int i = 0; i < client_count; i++)
     {
         send(sck_list[i].sck, msg, MAX_SIZE, 0);
     }
 }
+
 
 void recv_msg(int idx) {
     char buf[MAX_SIZE] = { };
@@ -132,7 +133,7 @@ void recv_msg(int idx) {
         {
             msg = sck_list[idx].user + "님이 퇴장했습니다";
             cout << msg << endl;
-            send_msg(msg.c_str());
+            send_msg(msg.c_str());            
             del_client(idx);
             return;
         }

@@ -100,7 +100,16 @@ void Store(string check_id) {
     while (result->next()) {
         StoreUser = result->getString("id");
         StoreMsg = result->getString("chat");
-        cout << StoreUser << " : " << StoreMsg << endl;
+        if (check_id!=StoreUser)
+        {
+            cout << "________________" << endl;
+            break;
+        }
+        else 
+        {
+            cout << StoreUser << " : " << StoreMsg << endl;
+        }
+       
     }
 
 }
@@ -180,6 +189,32 @@ void Leave() {
     }
 }
 
+void Createtable() {
+
+    string check_chatting;
+
+    stmt = con->createStatement();
+    stmt->execute("CREATE TABLE user (id varchar(50) PRIMARY KEY not null, pw VARCHAR(50), user_name VARCHAR(50));");
+    delete stmt;
+
+    stmt = con->createStatement();
+    pstmt = con->prepareStatement("select * from user");
+    result = pstmt->executeQuery();
+
+    while (result->next())
+    {
+        check_chatting = result->getString(1).c_str();
+    }
+
+    if (check_chatting == "")
+    {
+        stmt = con->createStatement();
+        stmt->execute("create table chatting(id varchar(50), chat varchar(250) not null, foreign key(id) references user(id) on update cascade on delete cascade);");
+    }
+    delete stmt;
+}
+
+
 int main()
 {
     WSADATA wsa;
@@ -206,9 +241,23 @@ int main()
     stmt = con->createStatement();
     delete stmt;
 
-    //createtable();
+    string check_user;
+    stmt = con->createStatement();
+    pstmt = con->prepareStatement("show tables");
+    result = pstmt->executeQuery();
 
+    while (result->next())
+    {
+        check_user = result->getString(1).c_str();
+    }
 
+    if (check_user == "")
+    {
+        Createtable();
+    }
+    
+    
+    
     if (!code) {
 
         client_sock = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP);
@@ -219,6 +268,8 @@ int main()
         client_sock = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP);
 
         while (true) {
+
+            
 
             cout << "1: 로그인하기 2: 회원가입하기 3: 비밀번호 수정 4:회원탈퇴" << endl;
             cin >> choice;
@@ -246,7 +297,9 @@ int main()
                     check_pw = result->getString(2).c_str();
                 }
                 if (check_id == id_in && check_pw == pw) {
-                    cout << "로그인 되었습니다." << endl;
+                    /*cout << "로그인 되었습니다." << endl;
+                    cout << "1.전체메시지 2.1:1메시지"<<endl;*/
+                    
                     while (1) {
                         while (1) {
                             if (!connect(client_sock, (SOCKADDR*)&client_addr, sizeof(client_addr))) {
@@ -258,22 +311,26 @@ int main()
                         }
 
                         std::thread th2(chat_recv);
-                        Store(check_id);
-                        while (1) {
-                            string text;
-                            std::getline(cin, text);
-                            const char* buffer = text.c_str(); // string형을 char* 타입으로 변환
-                            send(client_sock, buffer, strlen(buffer), 0);
 
+                       
+                           Store(check_id);
+                           while (1) {
+                               string text;
+                               std::getline(cin, text);
+                               const char* buffer = text.c_str(); // string형을 char* 타입으로 변환
+                               send(client_sock, buffer, strlen(buffer), 0);
 
-                            if (text != "") {
-                                pstmt = con->prepareStatement("insert into chatting(id, chat) values(?,?)");
-                                pstmt->setString(1, id_in);
-                                pstmt->setString(2, buffer);
-                                pstmt->execute();
-                            }
+                               if (text != "") {
+                                   pstmt = con->prepareStatement("insert into chatting(id, chat) values(?,?)");
+                                   pstmt->setString(1, id_in);
+                                   pstmt->setString(2, buffer);
+                                   pstmt->execute();
+                               }
 
-                        }
+                           }
+                       
+                       
+ 
                         th2.join();
                         closesocket(client_sock);
                     }
@@ -308,6 +365,7 @@ int main()
                 else {
                     choice = 0;
                 }
+                continue;
             }
         }
 

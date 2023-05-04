@@ -89,7 +89,7 @@ void SignUp() {
     cout << "회원가입 성공" << endl;
 }
 
-void Store() {
+void Store(string check_id) {
     string StoreUser, StoreMsg;
 
     cout << "저장된 내용" << endl;
@@ -100,14 +100,8 @@ void Store() {
     while (result->next()) {
         StoreUser = result->getString("id");
         StoreMsg = result->getString("chat");
-        cout << StoreUser << " : " << StoreMsg << endl;
+        cout << StoreUser << " : " << StoreMsg << endl;   
     }
-
-}
-
-void Savechatting() {
-    
-    
 
 }
 
@@ -152,7 +146,39 @@ void Revise() {
 
 }
 
-
+void Leave() {
+    string id, pw, name;
+    string check_id, check_pw, check_name;
+    cout << "아이디를 입력해주세요: ";
+    cin >> id;
+    cout << "비밀번호를 입력해주세요: ";
+    cin >> pw;
+    cout << "이름을 입력해주세요: ";
+    cin >> name;
+    pstmt = con->prepareStatement("SELECT * FROM user where id = ? and pw = ? and user_name = ?");
+    pstmt->setString(1, id);
+    pstmt->setString(2, pw);
+    pstmt->setString(3, name);
+    pstmt->execute();
+    result = pstmt->executeQuery();
+    while (result->next()) {
+        check_id = result->getString(1).c_str();
+        check_pw = result->getString(2).c_str();
+        check_name = result->getString(3).c_str();
+    }
+    if (check_id != id || check_pw != pw || check_name != name) {
+        cout << "회원 정보가 일치하지 않습니다.\n";
+    }
+    else {
+        pstmt = con->prepareStatement("DELETE FROM user WHERE id = ?");
+        pstmt->setString(1, id);
+        result = pstmt->executeQuery();
+        pstmt = con->prepareStatement("DELETE FROM chatting WHERE id = ?");
+        pstmt->setString(1, id);
+        result = pstmt->executeQuery();
+        cout << "탈퇴되었습니다.\n";
+    }
+}
 
 int main()
 {
@@ -194,7 +220,7 @@ int main()
 
         while (true) {
 
-            cout << "1: 로그인하기 2: 회원가입하기 3: 비밀번호 수정" << endl;
+            cout << "1: 로그인하기 2: 회원가입하기 3: 비밀번호 수정 4:회원탈퇴" << endl;
             cin >> choice;
 
             // 로그인
@@ -232,22 +258,21 @@ int main()
                         }
 
                         std::thread th2(chat_recv);
-
+                        Store(check_id);
                         while (1) {
                             string text;
                             std::getline(cin, text);
                             const char* buffer = text.c_str(); // string형을 char* 타입으로 변환
                             send(client_sock, buffer, strlen(buffer), 0);
 
-                            Store();
-
-                            pstmt = con->prepareStatement("insert into chatting(id, chat) values(?,?)");
-                            pstmt->setString(1, id_in);
-                            pstmt->setString(2, text);
-                            pstmt->execute();
                             
-                            
-
+                            if (text != "") {
+                                pstmt = con->prepareStatement("insert into chatting(id, chat) values(?,?)");
+                                pstmt->setString(1, id_in);
+                                pstmt->setString(2, buffer);
+                                pstmt->execute();
+                            }
+                       
                         }
                         th2.join();
                         closesocket(client_sock);
@@ -271,6 +296,18 @@ int main()
             {
                 Revise();
                 continue;
+            }
+
+            if (choice == 4) {
+                int num;
+                cout << "정말 탈퇴하시겠습니까? (예: 1 아니오: 2)\n";
+                cin >> num;
+                if (num == 1) {
+                    Leave();
+                }
+                else {
+                    choice = 0;
+                }
             }
         }
 

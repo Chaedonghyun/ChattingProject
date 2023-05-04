@@ -89,7 +89,7 @@ void SignUp() {
     cout << "회원가입 성공" << endl;
 }
 
-void Store() {
+void Store(string check_id) {
     string StoreUser, StoreMsg;
 
     cout << "저장된 내용" << endl;
@@ -146,35 +146,45 @@ void Revise() {
 
 }
 
-void Createtable() {
-
-    string check_chatting;
-
-    stmt = con->createStatement();
-    stmt->execute("CREATE TABLE user (id varchar(50) PRIMARY KEY not null, pw VARCHAR(50), user_name VARCHAR(50));");
-    delete stmt;
-
-    stmt = con->createStatement();
-    pstmt = con->prepareStatement("select * from user");
+void Leave() {
+    string id, pw, name;
+    string check_id, check_pw, check_name;
+    cout << "아이디를 입력해주세요: ";
+    cin >> id;
+    cout << "비밀번호를 입력해주세요: ";
+    cin >> pw;
+    cout << "이름을 입력해주세요: ";
+    cin >> name;
+    pstmt = con->prepareStatement("SELECT * FROM user where id = ? and pw = ? and user_name = ?");
+    pstmt->setString(1, id);
+    pstmt->setString(2, pw);
+    pstmt->setString(3, name);
+    pstmt->execute();
     result = pstmt->executeQuery();
-
-    while (result->next())
-    {
-        check_chatting = result->getString(1).c_str();
+    while (result->next()) {
+        check_id = result->getString(1).c_str();
+        check_pw = result->getString(2).c_str();
+        check_name = result->getString(3).c_str();
     }
-
-    if (check_chatting == "")
-    {
-        stmt = con->createStatement();
-        stmt->execute("create table chatting(id varchar(50), chat varchar(250) not null, foreign key(id) references user(id) on update cascade on delete cascade);");
+    if (check_id != id || check_pw != pw || check_name != name) {
+        cout << "회원 정보가 일치하지 않습니다.\n";
     }
-    delete stmt;
+    else {
+        pstmt = con->prepareStatement("DELETE FROM user WHERE id = ?");
+        pstmt->setString(1, id);
+        result = pstmt->executeQuery();
+        pstmt = con->prepareStatement("DELETE FROM chatting WHERE id = ?");
+        pstmt->setString(1, id);
+        result = pstmt->executeQuery();
+        cout << "탈퇴되었습니다.\n";
+    }
 }
 
 int main()
 {
     WSADATA wsa;
     int choice = 0;
+    bool log = true;
     int code = WSAStartup(MAKEWORD(2, 2), &wsa);
 
     // sql 연결
@@ -193,22 +203,11 @@ int main()
     stmt->execute("set names euckr");
     if (stmt) { delete stmt; stmt = nullptr; }
 
-
-    delete stmt;
-    string check_user;
     stmt = con->createStatement();
-    pstmt = con->prepareStatement("show tables");
-    result = pstmt->executeQuery();
+    delete stmt;
 
-    while (result->next())
-    {
-        check_user = result->getString(1).c_str();
-    }
+    //createtable();
 
-    if (check_user == "")
-    {
-        Createtable();
-    }
 
     if (!code) {
 
@@ -219,10 +218,9 @@ int main()
         InetPton(AF_INET, TEXT("127.0.0.1"), &client_addr.sin_addr);
         client_sock = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP);
 
-
         while (true) {
 
-            cout << "1: 로그인하기 2: 회원가입하기 3: 비밀번호 수정" << endl;
+            cout << "1: 로그인하기 2: 회원가입하기 3: 비밀번호 수정 4:회원탈퇴" << endl;
             cin >> choice;
 
             // 로그인
@@ -254,20 +252,19 @@ int main()
                             if (!connect(client_sock, (SOCKADDR*)&client_addr, sizeof(client_addr))) {
                                 cout << "Server Connect" << endl;
                                 send(client_sock, id_in.c_str(), id_in.length(), 0);
-                                Store();
                                 break;
                             }
                             cout << "Connecting..." << endl;
                         }
 
                         std::thread th2(chat_recv);
-
-
+                        Store(check_id);
                         while (1) {
                             string text;
                             std::getline(cin, text);
                             const char* buffer = text.c_str(); // string형을 char* 타입으로 변환
                             send(client_sock, buffer, strlen(buffer), 0);
+
 
                             if (text != "") {
                                 pstmt = con->prepareStatement("insert into chatting(id, chat) values(?,?)");
@@ -299,6 +296,18 @@ int main()
             {
                 Revise();
                 continue;
+            }
+
+            if (choice == 4) {
+                int num;
+                cout << "정말 탈퇴하시겠습니까? (예: 1 아니오: 2)\n";
+                cin >> num;
+                if (num == 1) {
+                    Leave();
+                }
+                else {
+                    choice = 0;
+                }
             }
         }
 

@@ -14,7 +14,7 @@ using std::string;
 
 const string server = "tcp://127.0.0.1:3306";
 const string username = "root";
-const string password = "abc1234";
+const string password = "991119!";
 
 
 #define MAX_SIZE 1024
@@ -100,15 +100,11 @@ void Store(string check_id) {
     while (result->next()) {
         StoreUser = result->getString("id");
         StoreMsg = result->getString("chat");
-        if (check_id != StoreUser)
+        if (StoreUser!=check_id && StoreMsg=="")
         {
-            cout << "________________" << endl;
             break;
         }
-        else
-        {
-            cout << StoreUser << " : " << StoreMsg << endl;
-        }
+        cout << StoreUser << " : " << StoreMsg << endl;
 
     }
 
@@ -192,6 +188,7 @@ void Leave() {
 void Createtable() {
 
     string check_chatting;
+    string dm;
 
     stmt = con->createStatement();
     stmt->execute("CREATE TABLE user (id varchar(50) PRIMARY KEY not null, pw VARCHAR(50), user_name VARCHAR(50));");
@@ -211,6 +208,9 @@ void Createtable() {
         stmt = con->createStatement();
         stmt->execute("create table chatting(id varchar(50), chat varchar(250) not null, foreign key(id) references user(id) on update cascade on delete cascade);");
     }
+
+
+    
     delete stmt;
 }
 
@@ -255,7 +255,6 @@ int main()
     {
         Createtable();
     }
-
 
 
     if (!code) {

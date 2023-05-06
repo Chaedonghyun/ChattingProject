@@ -1,13 +1,15 @@
 ﻿#pragma comment(lib, "ws2_32.lib")
 
 #include <WinSock2.h>
+#include <WS2tcpip.h>
 #include <string>
 #include <iostream>
 #include <thread>
 #include <vector>
+#include <mysql/jdbc.h>
 
 #define MAX_SIZE 1024
-#define MAX_CLIENT 3
+#define MAX_CLIENT 5
 
 using std::cout;
 using std::endl;
@@ -31,9 +33,36 @@ void recv_msg(int idx);
 void del_client(int idx);
 
 
+
+const string server = "tcp://127.0.0.1:3306";
+const string username = "root";
+const string password = "abc1234";
+
+sql::mysql::MySQL_Driver* driver;
+sql::Connection* con;
+sql::Statement* stmt;
+sql::PreparedStatement* pstmt;
+sql::ResultSet* result;
+
 int main()
 {
     WSADATA wsa;
+
+    // sql 연결
+    try {
+        driver = sql::mysql::get_mysql_driver_instance();
+        con = driver->connect(server, username, password);
+    }
+    catch (sql::SQLException& e) {
+        cout << "Could not connect to server. Error message: " << e.what() << endl;
+        exit(1);
+    }
+
+    con->setSchema("project");
+
+    stmt = con->createStatement();
+    stmt->execute("set names euckr");
+    if (stmt) { delete stmt; stmt = nullptr; }
 
     int code = WSAStartup(MAKEWORD(2, 2), &wsa);
 
@@ -96,6 +125,7 @@ void add_client() {
     recv(new_client.sck,buf, MAX_SIZE, 0);
     new_client.user = string(buf);
 
+
     string msg = new_client.user + "님이 입장했습니다";
     cout << msg << endl;
     sck_list.push_back(new_client);
@@ -105,17 +135,19 @@ void add_client() {
     client_count++;
     cout << "현재 인원수:" << client_count << "명" << endl;
     send_msg(msg.c_str());
+   
     th.join();
 }
 
 
 void send_msg(const char* msg) {
-    for (int i = 0; i < client_count; i++)
-    {
-        send(sck_list[i].sck, msg, MAX_SIZE, 0);
-    }
-}
+    
+	for (int i = 0; i < client_count; i++)
+	{
+		send(sck_list[i].sck, msg, MAX_SIZE, 0);
+	}
 
+}
 
 void recv_msg(int idx) {
     char buf[MAX_SIZE] = { };

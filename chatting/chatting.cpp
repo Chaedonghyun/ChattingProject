@@ -1,22 +1,19 @@
 ﻿#pragma comment(lib, "ws2_32.lib")
-
-#include <WinSock2.h> 
+#include <WinSock2.h>
 #include <WS2tcpip.h>
 #include <string>
 #include <sstream>
 #include <iostream>
 #include <thread>
 #include <mysql/jdbc.h>
-
+#include<istream>
 using std::cout;
 using std::endl;
 using std::string;
 
 const string server = "tcp://127.0.0.1:3306";
 const string username = "root";
-const string password = "991119!";
-
-
+const string password = "abc1234";
 #define MAX_SIZE 1024
 
 using std::cout;
@@ -30,14 +27,12 @@ sql::Statement* stmt;
 sql::PreparedStatement* pstmt;
 sql::ResultSet* result;
 
-
 SOCKET client_sock;
 string id_in;
 
 int chat_recv() {
     char buf[MAX_SIZE] = { };
     string msg;
-
     while (1) {
         ZeroMemory(&buf, MAX_SIZE);
         if (recv(client_sock, buf, MAX_SIZE, 0) > 0) {
@@ -45,7 +40,7 @@ int chat_recv() {
             std::stringstream ss(msg);
             string user;
             ss >> user;
-            if (user != id_in) cout << buf<<endl;
+            if (user != id_in) cout << buf << endl;
         }
         else {
             cout << "Server Off" << endl;
@@ -53,19 +48,16 @@ int chat_recv() {
         }
     }
 }
-
 void SignUp() {
     string id, pw, name;
     string check_id, check_pw;
     while (1) {
         cout << "사용할 아이디를 입력하세요:";
         cin >> id;
-
         pstmt = con->prepareStatement("SELECT * FROM user where id=? ;");
         pstmt->setString(1, id);
         pstmt->execute();
         result = pstmt->executeQuery();
-
         while (result->next()) {
             check_id = result->getString(1).c_str();
         }
@@ -85,118 +77,61 @@ void SignUp() {
     pstmt->setString(2, pw);
     pstmt->setString(3, name);
     pstmt->execute();
-
     cout << "회원가입 성공" << endl;
 }
-
 void Store(string check_id) {
     string StoreUser, StoreMsg;
-
+    bool id = true;
     cout << "저장된 내용" << endl;
     con->setSchema("project");
-    pstmt = con->prepareStatement("SELECT * FROM chatting;");
+    pstmt = con->prepareStatement("SELECT * FROM chatting ;");
     result = pstmt->executeQuery();
-
     while (result->next()) {
-        StoreUser = result->getString("id");
-        StoreMsg = result->getString("chat");
-        cout << StoreUser << " : " << StoreMsg << endl;
+        StoreUser = result->getString("id").c_str();
+        StoreMsg = result->getString("chat").c_str();
+        if (StoreUser == check_id)
+        {
+            id = false;
+        }
+        if (id == false)
+        {
+            cout << StoreUser << " : " << StoreMsg << endl;
+        }
     }
-
 }
-
 void Revise() {
     string id, pw;
     string check_id, check_pw;
-
     cout << "아이디를 입력하세요. : ";
     cin >> id;
     cout << "비밀번호를 입력하세요";
     cin >> pw;
-
     pstmt = con->prepareStatement("SELECT * FROM user where id = ? and pw =?;");
     pstmt->setString(1, id);
     pstmt->setString(2, pw);
     pstmt->execute();
     result = pstmt->executeQuery();
-
-
-        while (result->next()) {
-            check_id = result->getString(1).c_str();
-            check_pw = result->getString(2).c_str();
-
-        }
-
-        if (check_id != id || check_pw != pw) {
-            cout << "아이디,비밀번호가 맞지 않습니다.\n";
-        }
-
-        else {
-            cout << "변경할 비밀번호를 입력해 주세요. : ";
-            cin >> pw;
-            pstmt = con->prepareStatement("select id from user");
-            result = pstmt->executeQuery();
-
-            while (result->next()) {
-                pstmt = con->prepareStatement("UPDATE user SET pw = ? WHERE id = ?");
-                pstmt->setString(1, pw);
-                pstmt->setString(2, id);
-                pstmt->executeQuery();
-            }
-            cout << "변경 되었습니다\n";
-        }
-
-
-}
-
-void Leave() {
-    string id, pw, name;
-    string check_id, check_pw, check_name;
-
-    cout << "아이디를 입력해주세요: ";
-    cin >> id;
-    cout << "비밀번호를 입력해주세요: ";
-    cin >> pw;
-    cout << "이름을 입력해주세요: ";
-    cin >> name;
-
-    pstmt = con->prepareStatement("SELECT * FROM user where id = ? and pw = ? and user_name = ?");
-    pstmt->setString(1, id);
-    pstmt->setString(2, pw);
-    pstmt->setString(3, name);
-    pstmt->execute();
-    result = pstmt->executeQuery();
-
     while (result->next()) {
         check_id = result->getString(1).c_str();
         check_pw = result->getString(2).c_str();
-        check_name = result->getString(3).c_str();
     }
-<<<<<<< Updated upstream
-
     if (check_id != id || check_pw != pw) {
         cout << "아이디,비밀번호가 맞지 않습니다.\n";
-=======
-    if (check_id != id || check_pw != pw || check_name != name) {
-        cout << "회원 정보가 일치하지 않습니다.\n";
->>>>>>> Stashed changes
     }
-
     else {
-        
-            pstmt = con->prepareStatement("DELETE FROM user WHERE id = ?");
-            pstmt->setString(1, id);
-            result = pstmt->executeQuery();
-
-            pstmt = con->prepareStatement("DELETE FROM chatting WHERE id = ?");
-            pstmt->setString(1, id);
-            result = pstmt->executeQuery();
-
-            cout << "탈퇴되었습니다.\n";
+        cout << "변경할 비밀번호를 입력해 주세요. : ";
+        cin >> pw;
+        pstmt = con->prepareStatement("select id from user");
+        result = pstmt->executeQuery();
+        while (result->next()) {
+            pstmt = con->prepareStatement("UPDATE user SET pw = ? WHERE id = ?");
+            pstmt->setString(1, pw);
+            pstmt->setString(2, id);
+            pstmt->executeQuery();
         }
-
+        cout << "변경 되었습니다\n";
     }
-
+}
 void Leave() {
     string id, pw, name;
     string check_id, check_pw, check_name;
@@ -230,14 +165,18 @@ void Leave() {
         cout << "탈퇴되었습니다.\n";
     }
 }
-
+void Createtable() {
+    stmt->execute("CREATE TABLE user (id varchar(50) PRIMARY KEY not null, pw VARCHAR(50), user_name VARCHAR(50));");
+    stmt->execute("create table chatting(id varchar(50), chat varchar(250) not null, foreign key(id) references user(id) on update cascade on delete cascade);");
+    stmt->execute("create table direct_msg(send_id varchar(50), recv_id varchar(50), msg varchar(250), foreign key(send_id) references user(id) on update cascade on delete cascade);");
+    delete stmt;
+}
 int main()
 {
     WSADATA wsa;
     int choice = 0;
     bool log = true;
     int code = WSAStartup(MAKEWORD(2, 2), &wsa);
-
     // sql 연결
     try {
         driver = sql::mysql::get_mysql_driver_instance();
@@ -247,61 +186,47 @@ int main()
         cout << "Could not connect to server. Error message: " << e.what() << endl;
         exit(1);
     }
-
     con->setSchema("project");
-
     stmt = con->createStatement();
     stmt->execute("set names euckr");
     if (stmt) { delete stmt; stmt = nullptr; }
-
     stmt = con->createStatement();
     delete stmt;
-<<<<<<< Updated upstream
-
-    //createtable();
-=======
+   
+    string check_usertable;
+    stmt = con->createStatement();
+    pstmt = con->prepareStatement("show tables");
+    result = pstmt->executeQuery();
     
-
->>>>>>> Stashed changes
-
-
+    while (result->next()) {
+        check_usertable = result->getString(1).c_str();
+    }
+    if (check_usertable == "") {
+        Createtable();
+    }
     if (!code) {
-
         client_sock = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP);
         SOCKADDR_IN client_addr = {};
         client_addr.sin_family = AF_INET;
         client_addr.sin_port = htons(8080);
         InetPton(AF_INET, TEXT("127.0.0.1"), &client_addr.sin_addr);
-        client_sock = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP);
-
-        while (1) {
-
-<<<<<<< Updated upstream
+        
+        while (true) {
             cout << "1: 로그인하기 2: 회원가입하기 3: 비밀번호 수정 4:회원탈퇴" << endl;
-=======
-            cout << "1: 로그인하기 2: 회원가입하기 3: 비밀번호 수정 4: 탈퇴" << endl;
->>>>>>> Stashed changes
             cin >> choice;
-
             // 로그인
-
             if (choice == 1) {
-
                 string pw;
                 string check_id, check_pw;
-
                 cout << "ID:";
                 cin >> id_in;
                 cout << "PW:";
                 cin >> pw;
-
                 pstmt = con->prepareStatement("SELECT * FROM user where id=? and pw=?;");
                 pstmt->setString(1, id_in);
                 pstmt->setString(2, pw);
                 pstmt->execute();
                 result = pstmt->executeQuery();
-
-
                 while (result->next()) {
                     check_id = result->getString(1).c_str();
                     check_pw = result->getString(2).c_str();
@@ -309,71 +234,39 @@ int main()
                 if (check_id == id_in && check_pw == pw) {
                     cout << "로그인 되었습니다." << endl;
                     while (1) {
-                        while (1) {
-                            if (!connect(client_sock, (SOCKADDR*)&client_addr, sizeof(client_addr))) {
-                                cout << "Server Connect" << endl;
-                                send(client_sock, id_in.c_str(), id_in.length(), 0);
-                                Store();
-                                break;
-                            }
-                            cout << "Connecting..." << endl;
+                        if (!connect(client_sock, (SOCKADDR*)&client_addr, sizeof(client_addr))) {
+                            cout << "Server Connect" << endl;
+                            send(client_sock, id_in.c_str(), id_in.length(), 0);
+                            break;
                         }
-
-                        std::thread th2(chat_recv);
-                        Store(check_id);
-                        while (1) {
-                            string text;
-                            std::getline(cin, text);
-                            const char* buffer = text.c_str(); // string형을 char* 타입으로 변환
-                            send(client_sock, buffer, strlen(buffer), 0);
-
-<<<<<<< Updated upstream
-
-                            if (text != "") {
-                                pstmt = con->prepareStatement("insert into chatting(id, chat) values(?,?)");
-                                pstmt->setString(1, id_in);
-                                pstmt->setString(2, buffer);
-                                pstmt->execute();
-                            }
-=======
-         
-                            if (text != "") {
-                                pstmt = con->prepareStatement("insert into chatting(id, chat) values(?,?)");
-                                pstmt->setString(1, id_in);
-                                pstmt->setString(2, text);
-                                pstmt->execute();
-                            }
-                            
->>>>>>> Stashed changes
-
-                        }
-                        th2.join();
-                        closesocket(client_sock);
+                        cout << "Connecting..." << endl;
                     }
+                    std::thread th2(chat_recv);
+                    Store(check_id);
+                    while (1) {
+                        string text;
+                        std::getline(cin, text);
+                        const char* buffer = text.c_str(); // string형을 char* 타입으로 변환
+                        send(client_sock, buffer, strlen(buffer), 0);
+                    }
+                    th2.join();
+                    closesocket(client_sock);
                 }
                 else {
                     cout << "로그인에 실패했습니다." << endl;
                     continue;
                 }
-
-
-
             }
             if (choice == 2)
             {
                 SignUp();
                 continue;
             }
-
             if (choice == 3)
             {
                 Revise();
                 continue;
             }
-<<<<<<< Updated upstream
-
-=======
->>>>>>> Stashed changes
             if (choice == 4) {
                 int num;
                 cout << "정말 탈퇴하시겠습니까? (예: 1 아니오: 2)\n";
@@ -384,12 +277,9 @@ int main()
                 else {
                     choice = 0;
                 }
+                continue;
             }
         }
-
-
         WSACleanup();
-
     }
-
 }
